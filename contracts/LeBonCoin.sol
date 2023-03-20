@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.9;
 
-// IMPORT THE HARDHAT CONSOLE
-import "hardhat/console.sol";
-
 contract Factory {
 
     address owner;
@@ -55,13 +52,17 @@ contract SecondHandShop {
         uint price;
         address buyer;
         bool accepted;
+        bool received;
     }
 
-    uint256 internal salesNbr = 0;
-    uint256 internal offerNbr = 0;
+    uint256 public amountBlocked;
+    uint256 public amountAvailable;
 
-    mapping(uint256 => Sale) internal sales;
-    mapping(uint256 => Offer) internal offers;
+    uint256 public salesNbr = 0;
+    uint256 public offerNbr = 0;
+
+    mapping(uint256 => Sale) public sales;
+    mapping(uint256 => Offer) public offers;
 
     constructor(address _owner) {
         owner = _owner;
@@ -119,6 +120,14 @@ contract SecondHandShop {
         return address(this).balance;
     }
 
+    function getAvailableBalance() public view onlyOwner returns(uint){
+        return amountAvailable;
+    }
+
+    function getBlockedBalance() public view onlyOwner returns(uint){
+        return amountBlocked;
+    }
+
     function getOwner() public view returns(address){
         return owner;
     }
@@ -167,6 +176,7 @@ contract SecondHandShop {
                 _saleId,
                 _price,
                 msg.sender,
+                false,
                 false
             );
             sales[_saleId].offerNbr ++;
@@ -177,10 +187,10 @@ contract SecondHandShop {
     function getOffer(
         uint256 _id) public view
         offerExists(_id)
-        returns(uint, uint, address, bool) {
+        returns(uint, uint, address, bool, bool) {
 
         Offer memory offerAsked = offers[_id];
-        return (offerAsked.saleId, offerAsked.price, offerAsked.buyer, offerAsked.accepted);
+        return (offerAsked.saleId, offerAsked.price, offerAsked.buyer, offerAsked.accepted, offerAsked.received);
 
     }
 
@@ -205,17 +215,32 @@ contract SecondHandShop {
 
         uint saleId = offers[_offerId].saleId;
         require(sales[saleId].sold == false, 'This product is already sold');
-        require(offers[_offerId].price <= msg.value, 'The price is higher than the value you sent');
+        require(offers[_offerId].price == msg.value, 'The price is not equal to the value you sent');
         deposit();
-        emit Buy(msg.sender, _offerId, msg.value);
+
+        amountBlocked += msg.value;
+
         sales[saleId].sold = true;
     }
 
+    function comfirmReceive(
+        uint _offerId) 
+        public 
+        onlyBuyer(_offerId) {
+        require(sales[_offerId].sold == true, 'This item is is not sold');
+        offers[_offerId].received = true;
+        amountBlocked -= offers[_offerId].price;
+        amountAvailable += offers[_offerId].price;
+        emit Buy(msg.sender, _offerId, offers[_offerId].price);
+
+    }
+
     function withdraw() public onlyOwner {
-        uint amount = address(this).balance;
+        uint amount = amountAvailable;
 
         (bool success, ) = owner.call{value: amount}("");
         require(success, "Failed to send Ether");
+        amountAvailable = 0;
         emit Withdraw(owner, amount);
     }
 

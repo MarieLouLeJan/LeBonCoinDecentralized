@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/home/marie-lou/Desktop/Acadee/LeBonCoinHardHat/contracts/LeBonCoin.sol": {
-      "lastModificationDate": 1679326157513,
-      "contentHash": "6902020fab932c6352a7472e31770891",
+      "lastModificationDate": 1679332268446,
+      "contentHash": "16d4f3dd66f1736f98d88f644c1996ad",
       "sourceName": "contracts/LeBonCoin.sol",
       "solcConfig": {
         "version": "0.8.18",

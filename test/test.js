@@ -48,7 +48,7 @@ describe("Factory & Shop Unit Test", function(){
 
     it(`can't respond to non existent offer`, async () => {
 
-        await shop.connect(seller1).createSale('TV', 10);
+        await shop.connect(seller1).createSale('TV', 1000000);
         await expect(shop.connect(seller1).responseToOffer(1, true)).to.be.rejectedWith('This offer does not exist')
     
     });
@@ -60,14 +60,12 @@ describe("Factory & Shop Unit Test", function(){
 
     it(`owner can't create offer`, async () => {
 
-        await shop.connect(seller1).createSale('TV', 10);
         await expect(shop.connect(seller1).addOffer(1, 5)).to.be.rejectedWith('You can not create offer as you are the owner')
     });
 
 
     it(`can't buy sale if offer doesn't exist`, async () => {
 
-        await shop.connect(seller1).createSale('TV', 10);
         await expect(shop.connect(buyer1).buyTheSale(1, {value: ethers.utils.parseUnits("50000", "wei")})).to.be.rejectedWith('This offer does not exist')
 
     });
@@ -75,16 +73,13 @@ describe("Factory & Shop Unit Test", function(){
 
     it(`only owner can respond to offer`, async () => {
 
-        await shop.connect(seller1).createSale('TV', 10);
-        await shop.connect(buyer1).addOffer(1, 5);
+        await shop.connect(buyer1).addOffer(1, 50000);
         await expect(shop.connect(seller2).responseToOffer(1, true)).to.be.rejectedWith('Owner only can run this transaction')
     });
 
 
     it(`can't buy sale that hasn't been approved by owner`, async () => {
 
-        await shop.connect(seller1).createSale('TV', 1000000);
-        await shop.connect(buyer1).addOffer(1, 50000);
         await expect(shop.connect(buyer1).buyTheSale(1, {value: ethers.utils.parseUnits("50000", "wei")})).to.be.rejectedWith('The owner did not accept your offer yet')
     
     });
@@ -92,23 +87,48 @@ describe("Factory & Shop Unit Test", function(){
 
     it(`only buyer can buy sale with his offer`, async () => {
 
-        await shop.connect(seller1).createSale('TV', 1000000);
-        await shop.connect(buyer1).addOffer(1, 50000);
         await shop.connect(seller1).responseToOffer(1, true);
         await expect(shop.connect(buyer2).buyTheSale(1, {value: ethers.utils.parseUnits("50000", "wei")})).to.be.rejectedWith('You are not the buyer')
     
     });
 
 
-    it(`only owner can withdraw`, async () => {
+    it(`amount is not available until buyer dont comfirm receiving`, async () => {
 
-        await shop.connect(seller1).createSale('TV', 1000000);
-        await shop.connect(buyer1).addOffer(1, 50000);
-        await shop.connect(seller1).responseToOffer(1, true);
         await shop.connect(buyer1).buyTheSale(1, {value: ethers.utils.parseUnits("50000", "wei")})
-        await expect(shop.connect(seller2).withdraw()).to.be.rejectedWith('Owner only can run this transaction')
-    
+        const amountBlocked = await shop.connect(seller1).getBlockedBalance()
+        const amountAvailable = await shop.connect(seller1).getAvailableBalance()
+        expect(amountBlocked).to.be.equal('50000')
+        expect(amountAvailable).to.be.equal('0')
+
     });
+
+
+    it(`only buyer can comfirm receiving`, async () => {
+
+        await expect(shop.connect(seller1).comfirmReceive(1)).to.be.rejectedWith('You are not the buyer')
+
+    });
+
+
+    it(`amount is available after buyer confirm`, async () => {
+
+        await shop.connect(buyer1).comfirmReceive(1);
+        const amountBlocked = await shop.connect(seller1).getBlockedBalance()
+        const amountAvailable = await shop.connect(seller1).getAvailableBalance()
+        expect(amountBlocked).to.be.equal('0')
+        expect(amountAvailable).to.be.equal('50000')
+
+    });
+
+
+    it(`only seller can withdraw`, async () => {
+
+        await expect(shop.connect(seller2).withdraw()).to.be.rejectedWith('Owner only can run this transaction')
+
+    });
+
+
         
 });
 
@@ -197,8 +217,15 @@ describe("Factory & Shop Test", function(){
         const contractBalanceAfter = await shop.connect(seller1).getContractBalance();
         // After the transaction, we expect the contract balance to be higher than before
         expect(contractBalanceAfter).to.be.above(contractBalanceBefore);
+        // And we expect the amount to be blocked
+        const amountBlocked = await shop.connect(seller1).getBlockedBalance();
+        expect(amountBlocked).to.be.equal('5000000000000000')
 
-        // The seller can claim his ETH
+        // The buyer confirm the receiving
+        await shop.connect(buyer1).comfirmReceive(1);
+        const amountAvailable = await shop.connect(seller1).getAvailableBalance();
+        expect(amountAvailable).to.be.equal('5000000000000000')
+        // And the seller can claim his ETH
         const withdrawTX = await shop.connect(seller1).withdraw();
         const ownerBalanceAfter = await shop.connect(seller1).getOwnerBalance();
         // We accept his balance to be higher than before
@@ -208,32 +235,15 @@ describe("Factory & Shop Test", function(){
             .to.emit(shop, 'Withdraw')
             .withArgs({owner: seller1, amount: contractBalanceAfter});
 
-        // Finally, we expect the contract balance to be equal to 0
+        // Finally, we expect the contract balance to be equal to 0 as well as the amountBlocked and amountAvailable
         const contractBalanceAfterWithdraw = await shop.connect(seller1).getContractBalance();
         expect(contractBalanceAfterWithdraw).to.be.equal(0)
+        const amountBlockedFinal = await shop.connect(seller1).getBlockedBalance()
+        const amountAvailableFinal = await shop.connect(seller1).getAvailableBalance()
+        expect(amountBlockedFinal).to.be.equal('0')
+        expect(amountAvailableFinal).to.be.equal('0')
 
         // ALL GOOD MY FRIEND !
     })
 })
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
