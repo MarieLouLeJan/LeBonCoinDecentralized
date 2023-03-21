@@ -41,95 +41,73 @@ describe("Factory & Shop Unit Test", function(){
 
 
     it(`can't add offer on non existent sale`, async () => {
-
         await expect(shop.connect(buyer1).addOffer(1, 5)).to.be.rejectedWith('This sale does not exist')
-    
+
     });
 
     it(`can't respond to non existent offer`, async () => {
-
-        await shop.connect(seller1).createSale('TV', 1000000);
+        await shop.connect(seller1).createSale(ethers.utils.formatBytes32String('TV'), 1000000);
         await expect(shop.connect(seller1).responseToOffer(1, true)).to.be.rejectedWith('This offer does not exist')
-    
     });
 
 
     it('only owner can create sale', async () => {
-        await expect(shop.connect(seller2).createSale('TV', 10)).to.be.rejectedWith('Owner only can run this transaction')
+        await expect(shop.connect(seller2).createSale(ethers.utils.formatBytes32String('TV'), 10)).to.be.rejectedWith('Owner only can run this transaction')
     })
 
     it(`owner can't create offer`, async () => {
-
         await expect(shop.connect(seller1).addOffer(1, 5)).to.be.rejectedWith('You can not create offer as you are the owner')
     });
 
 
     it(`can't buy sale if offer doesn't exist`, async () => {
-
         await expect(shop.connect(buyer1).buyTheSale(1, {value: ethers.utils.parseUnits("50000", "wei")})).to.be.rejectedWith('This offer does not exist')
-
     });
 
 
     it(`only owner can respond to offer`, async () => {
-
         await shop.connect(buyer1).addOffer(1, 50000);
         await expect(shop.connect(seller2).responseToOffer(1, true)).to.be.rejectedWith('Owner only can run this transaction')
     });
 
 
     it(`can't buy sale that hasn't been approved by owner`, async () => {
-
         await expect(shop.connect(buyer1).buyTheSale(1, {value: ethers.utils.parseUnits("50000", "wei")})).to.be.rejectedWith('The owner did not accept your offer yet')
-    
     });
 
 
     it(`only buyer can buy sale with his offer`, async () => {
-
         await shop.connect(seller1).responseToOffer(1, true);
         await expect(shop.connect(buyer2).buyTheSale(1, {value: ethers.utils.parseUnits("50000", "wei")})).to.be.rejectedWith('You are not the buyer')
-    
     });
 
 
     it(`amount is not available until buyer dont comfirm receiving`, async () => {
-
         await shop.connect(buyer1).buyTheSale(1, {value: ethers.utils.parseUnits("50000", "wei")})
         const amountBlocked = await shop.connect(seller1).getBlockedBalance()
         const amountAvailable = await shop.connect(seller1).getAvailableBalance()
         expect(amountBlocked).to.be.equal('50000')
         expect(amountAvailable).to.be.equal('0')
-
     });
 
 
     it(`only buyer can comfirm receiving`, async () => {
-
         await expect(shop.connect(seller1).comfirmReceive(1)).to.be.rejectedWith('You are not the buyer')
-
     });
 
 
     it(`amount is available after buyer confirm`, async () => {
-
         await shop.connect(buyer1).comfirmReceive(1);
         const amountBlocked = await shop.connect(seller1).getBlockedBalance()
         const amountAvailable = await shop.connect(seller1).getAvailableBalance()
         expect(amountBlocked).to.be.equal('0')
         expect(amountAvailable).to.be.equal('50000')
-
     });
 
 
     it(`only seller can withdraw`, async () => {
-
         await expect(shop.connect(seller2).withdraw()).to.be.rejectedWith('Owner only can run this transaction')
-
-    });
-
-
-        
+    }); 
 });
 
 
@@ -166,7 +144,7 @@ describe("Factory & Shop Test", function(){
         const ownerBalanceBefore = await shop.connect(seller1).getOwnerBalance();
 
         // Seller create a sale
-        const saleTX = await shop.connect(seller1).createSale('Phone', '10000000000000000');
+        const saleTX = await shop.connect(seller1).createSale(ethers.utils.formatBytes32String('Phone'), '10000000000000000');
         // Check the event 'CreateSale' is well emmited
         expect(saleTX)
             .to.emit(shop, 'CreateSale')
@@ -174,7 +152,7 @@ describe("Factory & Shop Test", function(){
 
         // Check the sale is registered 
         const saleCreation = await shop.getSale(1);
-        expect(saleCreation[0]).to.be.equal('Phone')
+        expect(saleCreation[0]).to.be.equal(ethers.utils.formatBytes32String('Phone'))
         expect(saleCreation[1]).to.be.equal('10000000000000000')
         expect(saleCreation[2]).to.be.equal(false)
 
