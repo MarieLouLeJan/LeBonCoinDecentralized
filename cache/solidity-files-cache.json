@@ -1,9 +1,9 @@
 {
   "_format": "hh-sol-cache-2",
   "files": {
-    "/home/marie-lou/Desktop/Acadee/LeBonCoinHardHat/contracts/LeBonCoin.sol": {
-      "lastModificationDate": 1679389344981,
-      "contentHash": "756d6e6ccb5fd0f7345576762e863810",
+    "/home/marie-lou/Desktop/LeBonCoinHardHat/contracts/LeBonCoin.sol": {
+      "lastModificationDate": 1679390896518,
+      "contentHash": "0ff4d8024f3cb0516f18b0f753e2043f",
       "sourceName": "contracts/LeBonCoin.sol",
       "solcConfig": {
         "version": "0.8.18",
@@ -35,41 +35,6 @@
       "artifacts": [
         "Factory",
         "SecondHandShop"
-      ]
-    },
-    "/home/marie-lou/Desktop/Acadee/LeBonCoinHardHat/node_modules/hardhat/console.sol": {
-      "lastModificationDate": 1679314995335,
-      "contentHash": "4ff3cd2f6272c9a6516e9ee4f2b967d3",
-      "sourceName": "hardhat/console.sol",
-      "solcConfig": {
-        "version": "0.8.18",
-        "settings": {
-          "optimizer": {
-            "enabled": false,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        ">= 0.4.22 <0.9.0"
-      ],
-      "artifacts": [
-        "console"
       ]
     }
   }

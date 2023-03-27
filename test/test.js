@@ -139,16 +139,20 @@ describe("Factory & Shop Test", function(){
 
     it(`can do a perfect transaction`, async () => {
 
+        let txResult;
+
         // Get both contract and owner balance before starting selling items
         const contractBalanceBefore = await shop.connect(seller1).getContractBalance();
         const ownerBalanceBefore = await shop.connect(seller1).getOwnerBalance();
 
         // Seller create a sale
         const saleTX = await shop.connect(seller1).createSale(ethers.utils.formatBytes32String('Phone'), '10000000000000000');
+
         // Check the event 'CreateSale' is well emmited
-        expect(saleTX)
-            .to.emit(shop, 'CreateSale')
-            .withArgs({owner: seller1, saleId: 1})
+        txResult = await saleTX.wait();
+        const CreateSale = txResult.events.find(event => event.event === 'CreateSale');
+        expect(CreateSale.args[0]).to.be.equal(seller1.address)
+        expect(CreateSale.args[1]).to.be.equal(1)
 
         // Check the sale is registered 
         const saleCreation = await shop.getSale(1);
@@ -158,10 +162,14 @@ describe("Factory & Shop Test", function(){
 
         // A seller create an offer for sale with id 1
         const offerTX = await shop.connect(buyer1).addOffer(1, '5000000000000000')
-        // An event is emmited
-        expect(offerTX)
-            .to.emit(shop, 'CreateOffer')
-            .withArgs({buyer: buyer1, saleId: 1, priceOffered: '5000000000000000'});
+
+        // Check the event 'CreateOffer' is well emited
+        txResult = await offerTX.wait();
+        const CreateOffer = txResult.events.find(event => event.event === 'CreateOffer');
+        expect(CreateOffer.args[0]).to.be.equal(buyer1.address)
+        expect(CreateOffer.args[1]).to.be.equal(1)
+        expect(CreateOffer.args[2]).to.be.equal('5000000000000000')
+
         
         // Check the offer is registered 
         const offerCreation = await shop.getOffer(1);
@@ -172,23 +180,22 @@ describe("Factory & Shop Test", function(){
 
         // Seller send a positive answer to the offer
         const responseTX = await shop.connect(seller1).responseToOffer(1, true);
-        // Check an event is emmited
-        expect(responseTX)
-            .to.emit(shop, 'CreateOffer')
-            .withArgs({buyer: buyer1, offerId: 1});
+
+        // Check an event AcceptOffer is emmited
+        txResult = await responseTX.wait();
+        const AcceptOffer = txResult.events.find(event => event.event === 'AcceptOffer');
+        expect(AcceptOffer.args[0]).to.be.equal(buyer1.address)
+        expect(AcceptOffer.args[1]).to.be.equal(1)
+
 
         // The offer is now registered at accepted == true
         const offerValidation = await shop.getOffer(1);
         expect(offerValidation[3]).to.be.equal(true)
 
-        // So the buyer can now buy the sale, with the exact or higher price of the offer
+        // So the buyer can now buy the sale, with the exact price of the offer
         const buyTX = await shop.connect(buyer1).buyTheSale(1, {value: ethers.utils.parseUnits("5000000000000000", "wei")})
-        // An event is emmited
-        expect(buyTX)
-            .to.emit(shop, 'CreateOffer')
-            .withArgs({buyer: buyer1, offerId: 1, price: '5000000000000000'});
-
         const sale = await shop.getSale(1);
+
         // Check that the sale.sold == true
         expect(sale[2]).to.be.equal(true);
 
@@ -200,18 +207,30 @@ describe("Factory & Shop Test", function(){
         expect(amountBlocked).to.be.equal('5000000000000000')
 
         // The buyer confirm the receiving
-        await shop.connect(buyer1).comfirmReceive(1);
+        const comfirmTX = await shop.connect(buyer1).comfirmReceive(1);
         const amountAvailable = await shop.connect(seller1).getAvailableBalance();
         expect(amountAvailable).to.be.equal('5000000000000000')
+
+        // An event Buy is emmited
+        txResult = await comfirmTX.wait();
+        const Buy = txResult.events.find(event => event.event === 'Buy');
+        expect(Buy.args[0]).to.be.equal(buyer1.address)
+        expect(Buy.args[1]).to.be.equal(1)
+        expect(Buy.args[2]).to.be.equal('5000000000000000')
+
         // And the seller can claim his ETH
         const withdrawTX = await shop.connect(seller1).withdraw();
         const ownerBalanceAfter = await shop.connect(seller1).getOwnerBalance();
+
         // We accept his balance to be higher than before
         expect(ownerBalanceAfter).to.be.above(ownerBalanceBefore);
-        // And check the event was emmited
-        expect(withdrawTX)
-            .to.emit(shop, 'Withdraw')
-            .withArgs({owner: seller1, amount: contractBalanceAfter});
+
+        // An event Withdraw is emmited
+        txResult = await withdrawTX.wait();
+        const Withdraw = txResult.events.find(event => event.event === 'Withdraw');
+        expect(Withdraw.args[0]).to.be.equal(seller1.address)
+        expect(Withdraw.args[1]).to.be.equal(contractBalanceAfter)
+
 
         // Finally, we expect the contract balance to be equal to 0 as well as the amountBlocked and amountAvailable
         const contractBalanceAfterWithdraw = await shop.connect(seller1).getContractBalance();
@@ -224,4 +243,5 @@ describe("Factory & Shop Test", function(){
         // ALL GOOD MY FRIEND !
     })
 })
+
 
